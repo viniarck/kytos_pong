@@ -21,9 +21,8 @@ class Main(KytosNApp):
     @listen_to("kytos/ping.request")
     def on_ping(self, event):
         """On ping."""
-        log.info(f"on_ping sub {event.content}")
+        log.debug(f"on_ping sub {event.content}")
         event_name = "kytos/pong.reply"
-        event.content["response"] = int(event.content["value"]) + 1
         event = KytosEvent(name=event_name, content=dict(event.content))
         self.controller.buffers.app.put(event)
 
