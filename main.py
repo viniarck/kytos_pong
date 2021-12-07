@@ -1,7 +1,9 @@
 """kytos/pong."""
 
+import os
 from kytos.core import KytosEvent, KytosNApp, log
 from kytos.core.helpers import listen_to
+from threading import Lock
 
 
 class Main(KytosNApp):
@@ -15,16 +17,25 @@ class Main(KytosNApp):
         """
         log.info("pong starting")
         self.execute_as_loop(10)
+        self._lock = Lock()
+        self._count = 0
+        self._reply_skip_count = int(os.environ.get("PONG_SKIP_COUNT", 1000))
 
         # TODO try out a async decorator
 
     @listen_to("kytos/ping.request")
     def on_ping(self, event):
         """On ping."""
-        log.debug(f"on_ping sub {event.content}")
         event_name = "kytos/pong.reply"
+        with self._lock:
+            self._count += 1
+            if self._reply_skip_count > 0 and self._count % self._reply_skip_count != 0:
+                return
         event = KytosEvent(name=event_name, content=dict(event.content))
+        log.debug(f"on_ping sub replied to {event.content}")
         self.controller.buffers.app.put(event)
+        with self._lock:
+            self._count = 0
 
     def execute(self):
         """Run once on NApp 'start' or in a loop.
